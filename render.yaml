@@ -2,7 +2,13 @@ services:
   - type: web
     name: nlp-ticket-classifier
     env: python
-    pythonVersion: 3.10
     region: oregon
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    plan: free
+    pythonVersion: 3.10
+
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+
+    startCommand: |
+      uvicorn main:app --host 0.0.0.0 --port $PORT

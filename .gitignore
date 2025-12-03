@@ -1,4 +1,4 @@
-# Ignore virtual environment
+# Ignore virtual environments
 nlp_env/
 venv/
 .venv/
@@ -7,12 +7,8 @@ venv/
 __pycache__/
 *.pyc
 
-# Ignore models
-*.joblib
-*.bin
-*.pt
-*.safetensors
-sbert_encoder/
+# Ignore OS files
+.DS_Store
 
-# Ignore datasets
+# Ignore CSV / datasets
 *.csv
