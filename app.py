@@ -26,9 +26,9 @@ if st.button("Classify"):
                 st.write(e)
                 st.stop()
 
-            # --- FIX: HANDLE API ERRORS SAFELY ---
+            # --- Show result as Category ---
             if "prediction" in result:
-                st.success(f"Prediction: **{result['prediction']}**")
+                st.success(f"Category: **{result['prediction']}**")
             else:
                 st.error("❌ API Error occurred!")
-                st.write(result)  # shows the error dict for debugging
+                st.write(result)  # For debugging
