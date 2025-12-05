@@ -1,5 +1,3 @@
-# sbert_model.py
-
 import pandas as pd
 import joblib
 from sentence_transformers import SentenceTransformer
@@ -31,7 +29,8 @@ print("Test samples:", len(X_test))
 
 # Load OFFLINE SentenceTransformer model
 print("Loading offline SBERT model...")
-sbert_model = SentenceTransformer("models/all-MiniLM-L6-v2")
+# --- CRITICAL FIX: Changed the path to the actual local folder name (sbert_encoder) ---
+sbert_model = SentenceTransformer("./sbert_encoder")
 print("SBERT loaded successfully.\n")
 
 # Convert text to embeddings
