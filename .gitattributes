@@ -1,1 +1,2 @@
+*.bin filter=lfs diff=lfs merge=lfs -text
 sbert_encoder/pytorch_model.bin filter=lfs diff=lfs merge=lfs -text
