@@ -1,106 +1,110 @@
 import pandas as pd
 import joblib
 from sentence_transformers import SentenceTransformer
+from fastapi import FastAPI
+from pydantic import BaseModel
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-import numpy as np
-
-# --- Configuration ---
-LOCAL_MODEL_PATH = "./sbert_encoder"   # Your local 384-dim SBERT model folder
-DATA_FILE = "customer_support_tickets.csv"  
-CLASSIFIER_OUTPUT = "ticket_classifier_model.joblib"
-LABEL_ENCODER_OUTPUT = "label_encoder.joblib"
 
 
-def load_data():
-    """Load data from CSV and combine subject + description."""
-    print(f"Loading data from {DATA_FILE}...")
+# -----------------------------
+# CONFIG
+# -----------------------------
+LOCAL_MODEL_PATH = "./sbert_encoder"
+CLASSIFIER_FILE = "ticket_classifier_model.joblib"
+LABEL_FILE = "label_encoder.joblib"
+DATA_FILE = "customer_support_tickets.csv"
+
+
+# -----------------------------
+# FASTAPI APP
+# -----------------------------
+app = FastAPI()
+
+
+@app.get("/")
+def home():
+    return {"message": "Ticket Classifier API Running!"}
+
+
+# -----------------------------
+# REQUEST MODEL
+# -----------------------------
+class TicketInput(BaseModel):
+    subject: str
+    description: str
+
+
+# -----------------------------
+# LOAD MODELS ONCE AT STARTUP
+# -----------------------------
+print("Loading SBERT model...")
+sbert_model = SentenceTransformer(LOCAL_MODEL_PATH)
+
+print("Loading classifier...")
+clf = joblib.load(CLASSIFIER_FILE)
+
+print("Loading label encoder...")
+label_encoder = joblib.load(LABEL_FILE)
+
+print("All models loaded successfully!\n")
+
+
+# -----------------------------
+# PREDICTION ENDPOINT
+# -----------------------------
+@app.post("/predict")
+def predict_ticket(data: TicketInput):
+
+    # Combine text
+    text = data.subject + " " + data.description
+
+    # Encode into 384D embedding
     try:
-        df = pd.read_csv(DATA_FILE)
-    except FileNotFoundError:
-        print(f"❌ ERROR: {DATA_FILE} not found. Check your file path.")
-        return None, None
-
-    print("\nCSV Columns Found:", list(df.columns), "\n")
-
-    # --- FIXED COLUMN NAMES BASED ON YOUR CSV ---
-    if not {"Ticket Subject", "Ticket Description", "Ticket Type"}.issubset(df.columns):
-        print("❌ ERROR: Your CSV must contain these columns:")
-        print("   • Ticket Subject")
-        print("   • Ticket Description")
-        print("   • Ticket Type")
-        return None, None
-
-    # Combine text fields
-    df["text"] = df["Ticket Subject"] + " " + df["Ticket Description"]
-    
-    # Inputs (text) and labels (category)
-    X_text = df["text"].tolist()
-    y_labels = df["Ticket Type"].tolist()
-
-    return X_text, y_labels
-
-
-def train_new_model():
-    """Train Logistic Regression using 384-dim SBERT embeddings."""
-    
-    # 1. Load the dataset
-    X_text, y_labels = load_data()
-    if X_text is None:
-        return
-    
-    # 2. Load local 384-dim SBERT model
-    print(f"Loading SBERT model from {LOCAL_MODEL_PATH}...")
-    try:
-        sbert_model = SentenceTransformer(LOCAL_MODEL_PATH)
+        emb = sbert_model.encode([text])
     except Exception as e:
-        print("\n❌ FATAL ERROR: Could not load the SBERT model.")
-        print("Make sure the folder './sbert_encoder' exists and contains:")
-        print("   - config.json")
-        print("   - sentence_bert_config.json")
-        print("   - pytorch_model.bin (or safetensors)")
-        print("   - tokenizer files\n")
-        print(e)
-        return
+        return {"error": "Embedding generation failed", "details": str(e)}
 
-    # 3. Convert all texts into embeddings
-    print("\nGenerating 384-dimensional embeddings...")
-    X_embeddings = sbert_model.encode(X_text, show_progress_bar=True)
-    print(f"Embedding shape: {X_embeddings.shape} (should be N x 384)\n")
+    # Predict
+    try:
+        pred = clf.predict(emb)[0]
+        label = label_encoder.inverse_transform([pred])[0]
+    except Exception as e:
+        return {"error": "Prediction failed", "details": str(e)}
 
-    # 4. Encode labels
+    return {"prediction": label}
+
+
+# -----------------------------------------------------
+# TRAINING FUNCTION (You run manually, NOT in Render)
+# -----------------------------------------------------
+def train_new_model():
+
+    print(f"Loading data from {DATA_FILE}...")
+    df = pd.read_csv(DATA_FILE)
+
+    df["text"] = df["Ticket Subject"] + " " + df["Ticket Description"]
+    X = df["text"].tolist()
+    y = df["Ticket Type"].tolist()
+
     print("Encoding labels...")
     label_encoder = LabelEncoder()
-    y_encoded = label_encoder.fit_transform(y_labels)
+    y_encoded = label_encoder.fit_transform(y)
 
-    # 5. Train-test split (for validation)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_embeddings, y_encoded, 
-        test_size=0.2, random_state=42, stratify=y_encoded
-    )
+    print("Loading SBERT for embeddings...")
+    sbert = SentenceTransformer(LOCAL_MODEL_PATH)
+    X_emb = sbert.encode(X, show_progress_bar=True)
 
-    # 6. Train logistic regression classifier
-    print("\nTraining Logistic Regression classifier...")
-    clf = LogisticRegression(max_iter=500, random_state=42)
-    clf.fit(X_train, y_train)
+    print("Training classifier...")
+    clf = LogisticRegression(max_iter=500)
+    clf.fit(X_emb, y_encoded)
 
-    # 7. Check validation accuracy
-    accuracy = clf.score(X_test, y_test)
-    print(f"\n✅ Validation Accuracy: {accuracy:.4f}\n")
+    print("Saving classifier + label encoder...")
+    joblib.dump(clf, CLASSIFIER_FILE)
+    joblib.dump(label_encoder, LABEL_FILE)
 
-    # 8. Retrain on full dataset before saving
-    print("Retraining classifier on full dataset...")
-    clf.fit(X_embeddings, y_encoded)
-
-    # 9. Save classifier + label encoder
-    joblib.dump(clf, CLASSIFIER_OUTPUT)
-    joblib.dump(label_encoder, LABEL_ENCODER_OUTPUT)
-
-    print("\n🎉 SUCCESS! Model training complete.")
-    print(f"Saved classifier → {CLASSIFIER_OUTPUT}")
-    print(f"Saved label encoder → {LABEL_ENCODER_OUTPUT}")
-    print("\nYour new model now expects **384-dimension embeddings**, matching your local SBERT model.")
+    print("Training complete!")
 
 
 if __name__ == "__main__":
