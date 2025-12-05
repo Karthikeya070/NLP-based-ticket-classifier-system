@@ -10,6 +10,7 @@ from sentence_transformers import SentenceTransformer
 # ==============================
 print("Loading embeddings model...")
 sbert_model = SentenceTransformer("models/all-MiniLM-L6-v2")
+
 print("SBERT loaded.\n")
 
 print("Loading classifier...")
