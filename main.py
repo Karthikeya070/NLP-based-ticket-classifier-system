@@ -4,15 +4,9 @@ import joblib
 from sentence_transformers import SentenceTransformer
 import os # Import os for setting the correct path
 
-# ==============================
-# Define Local Model Path
-# ==============================
-# IMPORTANT: Point this to the local folder containing pytorch_model.bin, config.json, etc.
-# Based on your file structure, this is likely 'sbert_encoder'. Adjust if needed.
+#
 LOCAL_MODEL_PATH = "./sbert_encoder"
 
-# ==============================
-# Load Models ONCE on startup
 # ==============================
 print("Loading embeddings model...")
 
