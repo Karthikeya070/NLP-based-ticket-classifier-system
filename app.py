@@ -5,22 +5,30 @@ API_URL = "https://nlp-based-ticket-classifier-system.onrender.com/predict"
 
 st.set_page_config(page_title="Ticket Classifier", layout="centered")
 
-st.title("🎫 NLP Ticket Classifier")
+st.title("🎫 NLP Based Customer Support Ticket Classifier")
 st.write("Enter the ticket subject and description to classify the ticket.")
 
 subject = st.text_input("Subject")
 description = st.text_area("Description")
 
-if st.button("Predict"):
+if st.button("Classify"):
     if not subject or not description:
         st.error("Please fill both subject and description!")
     else:
-        with st.spinner("Predicting..."):
+        with st.spinner("Classifying..."):
             payload = {"subject": subject, "description": description}
-            response = requests.post(API_URL, json=payload)
 
-            if response.status_code == 200:
+            try:
+                response = requests.post(API_URL, json=payload)
                 result = response.json()
+            except Exception as e:
+                st.error("❌ Cannot reach API server.")
+                st.write(e)
+                st.stop()
+
+            # --- FIX: HANDLE API ERRORS SAFELY ---
+            if "prediction" in result:
                 st.success(f"Prediction: **{result['prediction']}**")
             else:
-                st.error("API Error! Check logs.")
+                st.error("❌ API Error occurred!")
+                st.write(result)  # shows the error dict for debugging
