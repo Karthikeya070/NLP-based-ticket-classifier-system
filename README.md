@@ -1,97 +1,102 @@
-# NLP Based Ticket Classifier
+NLP Based Ticket Classifier
 
-This project automatically classifies customer support tickets based on the subject and description provided by the user. The purpose of the system is to help support teams sort tickets into categories such as refund requests, technical issues, payment problems, account related issues, and similar topics. This improves response time and keeps the support workflow organised.
+A machine learning system that automatically classifies customer support tickets based on the subject and description. It uses a lightweight MiniLM Sentence Transformer for semantic understanding and a Logistic Regression model for prediction. The backend runs on FastAPI and is deployed on Render as a public API.
 
-The system uses a sentence transformer model to understand the meaning of the text. It does not depend on plain keywords. Instead, it looks at the context and intent behind the message. This gives much better accuracy, especially when users describe the same issue in different ways.
+How It Works
 
-The backend is built using FastAPI. It is deployed on Render as a web service. The API receives ticket text and returns the predicted category.
+Subject + description are combined into a single text.
 
----
+MiniLM sentence transformer converts text into embeddings.
 
-## How the model works
+Logistic Regression predicts the ticket category.
 
-1. The subject and description of the ticket are combined into a single input string.
-2. A sentence transformer model (MiniLM) converts this text into a numerical vector. This vector represents the meaning of the sentence.
-3. A logistic regression model uses these vectors to decide the correct category.
-4. The API sends back the predicted category in JSON format.
+FastAPI returns the result as JSON.
 
-The MiniLM model is lightweight and fast, which makes it suitable for deployment on Render while still giving strong accuracy.
+Features
 
----
+Fast and lightweight transformer-based classification
 
-## Features
+Clean FastAPI backend with JSON responses
 
-- Classifies tickets into predefined categories  
-- Uses a compact and efficient MiniLM sentence transformer  
-- Fast prediction using FastAPI  
-- Clean and simple codebase  
-- Can be deployed easily on Render  
+Easily deployable on Render
 
----
+Optional Streamlit interface for end users
 
-## Project Structure
+Project Structure
+main.py          → FastAPI app  
+predict.py       → Prediction logic  
+sbert_encoder/   → Saved MiniLM model  
+app.py           → Streamlit UI (optional)  
+requirements.txt → Dependencies  
+render.yaml      → Deployment config  
 
-main.py FastAPI application
-predict.py Prediction function using the trained model
-sbert_model.py SBERT related logic
-sbert_encoder/ Saved MiniLM model
-requirements.txt Python dependencies
-render.yaml Render deployment configuration
-eda.py Exploratory data analysis (optional)
-test_api.py Script for testing API locally
+API Endpoints
+GET /
 
+Health check endpoint.
 
----
+POST /predict
 
-## API Endpoints
+Input:
 
-### GET `/`
-Returns a small message to show that the API is running.
-
-### POST `/predict`
-Accepts subject and description as input, then returns the predicted ticket category.
-
-#### Example request
-
-```json
 {
   "subject": "Unable to log in",
   "description": "The login page keeps refreshing"
 }
 
-Example response
+
+Output:
+
 {
   "category": "Login Issue"
 }
 
-How to run locally
-
-Create and activate a virtual environment
-
-Install dependencies:
-
+Running Locally
 pip install -r requirements.txt
-
-
-Start the FastAPI server:
-
 uvicorn main:app --reload
 
 
-Open the API in a browser:
+API URL:
 
 http://127.0.0.1:8000
 
-Deployment
+Deployment (Render)
 
-The project is deployed on Render using the render.yaml file. Render installs dependencies, loads the MiniLM model from the repository, starts the server, and keeps the service active.
+FastAPI runs as a web service on Render
 
-Future improvements
+Render installs dependencies, loads the MiniLM model, and keeps the API available
 
-1)Adding more ticket categories
+Streamlit Frontend (Optional)
 
-2)Improving and expanding training data
+A simple UI for users to test the classifier.
 
-3)Adding a simple frontend for end users
+app.py example:
 
-4)Adding analytics to track common ticket trends
+import streamlit as st
+import requests
+
+API_URL = "YOUR_RENDER_API_URL/predict"
+
+st.title("Ticket Classifier")
+
+subject = st.text_input("Subject")
+description = st.text_area("Description")
+
+if st.button("Predict"):
+    response = requests.post(API_URL, json={"subject": subject, "description": description})
+    st.write("Prediction:", response.json().get("prediction"))
+
+
+Run:
+
+streamlit run app.py
+
+Future Enhancements
+
+Expand categories
+
+Improve training dataset
+
+Enhanced UI
+
+Analytics for ticket trends
